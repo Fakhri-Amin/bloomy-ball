@@ -5,21 +5,26 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] float launchForce = 1200f;
+    [SerializeField] float delayTime = 3f;
+    [SerializeField] float maxDragDistance = 3f;
     Vector2 startPosition;
     Color startColor;
     Rigidbody2D rb;
+    SpriteRenderer sp;
 
-    // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        rb.isKinematic = true;
-
-        startColor = GetComponent<SpriteRenderer>().color;
-        startPosition = GetComponent<Rigidbody2D>().position;
+        sp = GetComponent<SpriteRenderer>();
     }
 
-    // Update is called once per frame
+    void Start()
+    {
+        rb.isKinematic = true;
+        startPosition = rb.position;
+        startColor = sp.color;
+    }
+
     void Update()
     {
 
@@ -27,13 +32,29 @@ public class PlayerController : MonoBehaviour
 
     void OnMouseDown()
     {
-        GetComponent<SpriteRenderer>().color = Color.grey;
+        sp.color = Color.black;
     }
 
     void OnMouseDrag()
     {
         Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        transform.position = new Vector3(mousePosition.x, mousePosition.y, transform.position.z);
+
+        Vector2 desiredPosition = mousePosition;
+
+        float distance = Vector2.Distance(desiredPosition, startPosition);
+        if (distance > maxDragDistance)
+        {
+            Vector2 direction = desiredPosition - startPosition;
+            direction.Normalize();
+            desiredPosition = startPosition + (direction * maxDragDistance);
+        }
+
+        if (desiredPosition.x > startPosition.x)
+        {
+            desiredPosition.x = startPosition.x;
+        }
+
+        rb.position = desiredPosition;
     }
 
     void OnMouseUp()
@@ -45,6 +66,19 @@ public class PlayerController : MonoBehaviour
         rb.isKinematic = false;
         rb.AddForce(direction * launchForce);
 
-        GetComponent<SpriteRenderer>().color = startColor;
+        sp.color = startColor;
+    }
+
+    public void ResetPosition()
+    {
+        StartCoroutine(ResetAfterDelay());
+    }
+
+    IEnumerator ResetAfterDelay()
+    {
+        yield return new WaitForSeconds(delayTime);
+        rb.position = startPosition;
+        rb.isKinematic = true;
+        rb.velocity = Vector2.zero;
     }
 }
